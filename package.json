@@ -1,0 +1,9 @@
+{
+  "name": "digital-bank",
+  "private": true,
+  "workspaces": [
+    "app",
+    "api",
+    "packages/shared"
+  ]
+}

@@ -1,0 +1,22 @@
+{
+  "expo": {
+    "name": "Digital Bank",
+    "slug": "digital-bank",
+    "version": "1.0.0",
+    "scheme": "digitalbank",
+    "orientation": "portrait",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "android": {
+      "package": "com.melz8bit.digitalbank",
+      "softwareKeyboardLayoutMode": "pan"
+    },
+    "web": {
+      "bundler": "metro"
+    },
+    "plugins": ["expo-router"],
+    "extra": {
+      "router": {}
+    }
+  }
+}

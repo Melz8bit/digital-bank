@@ -1,0 +1,30 @@
+# dependencies
+node_modules/
+
+# env
+.env
+.env.production
+.env.local
+
+# expo
+app/.expo/
+app/dist/
+app/web-build/
+
+# api build output
+api/dist/
+
+# native build artifacts
+*.orig.*
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+
+# os / editor
+.DS_Store
+Thumbs.db
+
+# logs
+npm-debug.log*
