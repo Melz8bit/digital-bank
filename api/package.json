@@ -9,13 +9,18 @@
   },
   "dependencies": {
     "@digital-bank/shared": "*",
+    "bcrypt": "^6.0.0",
     "dotenv": "^16.4.7",
     "drizzle-orm": "^0.45.2",
     "express": "^4.21.2",
-    "pg": "^8.23.0"
+    "jsonwebtoken": "^9.0.3",
+    "pg": "^8.23.0",
+    "zod": "^4.6.5"
   },
   "devDependencies": {
+    "@types/bcrypt": "^6.0.0",
     "@types/express": "^4.17.21",
+    "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^22.10.2",
     "@types/pg": "^8.23.1",
     "drizzle-kit": "^0.31.10",
