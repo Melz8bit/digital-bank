@@ -26,8 +26,8 @@ api/dist/
 .DS_Store
 Thumbs.db
 
-# claude code session state
-.claude/
+# claude code session state (todo.md and session-logs/ are tracked on purpose)
+.claude/scheduled_tasks.lock
 
 # logs
 npm-debug.log*
