@@ -15,9 +15,14 @@ Full plan lives at the plan file from the initial planning session; this tracks 
 - [x] `db/client.ts` (Drizzle + pg Pool) and `db/migrate.ts` (runs automatically on `index.ts` boot)
 - [x] Shared zod schemas: `SignupInputSchema` (with `.refine()` enforcing exactly one of `familyName`/`inviteCode`), `LoginInputSchema`
 - [x] `authService.signup()` — bcrypt hash, transaction-wrapped family+parent creation, JWT issuance. Verified end-to-end against real Postgres (happy path + duplicate-email rejection), test data cleaned up.
-- [ ] `authService.login()` — next up
-- [ ] `requireAuth` middleware
+- [x] `authService.login()` — bcrypt.compare against stored hash, same JWT pattern as signup(), generic `INVALID_CREDENTIALS` for bad email/password. Verified end-to-end against real Postgres (correct password, wrong password, unknown email), test data cleaned up.
+- [x] `requireAuth` middleware (`api/src/middleware/requireAuth.ts`) — Bearer header parsing, `jwt.verify` in try/catch, guards against string-payload and missing-`sub` cases, sets `req.parentId` via `express.d.ts` declaration-merge augmentation. Typechecks clean; not yet exercised against a live route (no routes wired up yet).
+- [x] `env.ts` — extracted `JWT_SECRET` guard out of `authService.ts` into its own module so `authService` and `requireAuth` share one source instead of duplicating the check
 - [ ] `auth.routes.ts` — wire signup/login to real HTTP endpoints
+  - [x] `POST /signup` — validates with `SignupInputSchema`, calls `authService.signup()`, maps `EMAIL_TAKEN`→409 / `INVITE_SIGNUP_NOT_IMPLEMENTED`→501 / unknown→500 with real messages. Typechecks clean; not yet hit with a live HTTP request (router isn't mounted in `app.ts` yet).
+  - [ ] `POST /login` — next up, same shape as signup (validate with `LoginInputSchema`, call `authService.login()`, map `INVALID_CREDENTIALS`→401)
+  - [ ] mount the router in `app.ts` (e.g. `app.use('/auth', authRouter)`)
+  - [ ] verify both endpoints end-to-end with real HTTP requests (curl/Postman) against the real dev DB
 - [ ] PIN set/verify endpoints + rate limiting (`pin_attempts`/`pin_locked_until` lockout)
 - [ ] Client: login/signup screens wired via React Query + `useAuthStore`
 - [ ] Client: PIN unlock screen gating the Settings tab
