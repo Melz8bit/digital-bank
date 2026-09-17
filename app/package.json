@@ -4,9 +4,9 @@
   "main": "expo-router/entry",
   "private": true,
   "scripts": {
-    "start": "expo start",
-    "android": "expo start --android",
-    "web": "expo start --web"
+    "start": "expo start --port 19006",
+    "android": "expo start --android --port 19006",
+    "web": "expo start --web --port 19006"
   },
   "dependencies": {
     "@digital-bank/shared": "^0.0.0",
