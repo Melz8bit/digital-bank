@@ -19,3 +19,8 @@ export const LoginInputSchema = z.object({
   password: z.string().min(8),
 });
 export type LoginInput = z.infer<typeof LoginInputSchema>;
+
+export const PinInputSchema = z.object({
+  pin: z.string().regex(/^\d{4}$/, 'PIN must be exactly 4 digits.'),
+});
+export type PinInput = z.infer<typeof PinInputSchema>;
