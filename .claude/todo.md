@@ -30,6 +30,13 @@ Full plan lives at the plan file from the initial planning session; this tracks 
   - [x] verified end-to-end against real dev DB: status before/after set, duplicate-set rejection, correct verify, 4x wrong→401 then 5th→423, locked-out correct PIN still 423, verify against a family with no PIN set→409. Test data cleaned up.
   - [x] design decisions: PIN is family-wide (not per-parent); second parent joining via invite code skips PIN setup entirely (client-side routing off which signup branch was used, not an API concern); PIN change (requires old PIN) deferred to the later account-settings phase
 - [ ] Client: login/signup screens wired via React Query + `useAuthStore`
+  - [x] Installed `@tanstack/react-query`, `zustand`, `@react-native-async-storage/async-storage` in the `app` workspace
+  - [x] Design decisions: AsyncStorage for token persistence everywhere (not `expo-secure-store`, which doesn't work on web — matches the app's established low-threat-model reasoning); route gating via Expo Router 6's `<Stack.Protected guard={...}>` with an `(auth)` group for login/signup and the existing `(tabs)` group protected behind `!!token`
+  - [ ] `app/store/authStore.ts` — **in progress**. `AuthState` interface written (`token`, `parent`, `hasHydrated`, `setSession`/`clearSession`/`setHasHydrated`). Still need: the actual `create<AuthState>()(persist((set) => ({...}), {...}))` body — state defaults, the three actions' `set(...)` calls, and the `persist` config (`name`, `storage: createJSONStorage(() => AsyncStorage)`, `onRehydrateStorage`). Open question left unanswered: whether to add `partialize` to exclude `hasHydrated` from what gets written to storage (harmless either way, just sloppy without it).
+  - [ ] `queryClient.ts` + `QueryClientProvider` in root `_layout.tsx` — not started
+  - [ ] signup/login mutations (React Query, calling `/auth/signup` + `/auth/login`) — not started
+  - [ ] `(auth)` route group + `Stack.Protected` gating in root `_layout.tsx` — not started
+  - [ ] actual login/signup screen UI — not started
 - [ ] Client: PIN unlock screen gating the Settings tab
 - [ ] Client: `AppState` re-lock on backgrounding
 
