@@ -10,6 +10,7 @@
   "dependencies": {
     "@digital-bank/shared": "*",
     "bcrypt": "^6.0.0",
+    "cors": "^2.8.6",
     "dotenv": "^16.4.7",
     "drizzle-orm": "^0.45.2",
     "express": "^4.21.2",
@@ -19,6 +20,7 @@
   },
   "devDependencies": {
     "@types/bcrypt": "^6.0.0",
+    "@types/cors": "^2.8.19",
     "@types/express": "^4.17.21",
     "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^22.10.2",
