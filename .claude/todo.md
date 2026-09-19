@@ -46,6 +46,14 @@ Full plan lives at the plan file from the initial planning session; this tracks 
 - [ ] Client: PIN unlock screen gating the Settings tab
 - [ ] Client: `AppState` re-lock on backgrounding
 
+## Environment setup on Linux host (2026-09-19, second session)
+- [x] Fresh checkout had no `node_modules` / `api/.env` — ran `npm install` (823 packages), wrote gitignored `api/.env` (`DATABASE_URL`, random `JWT_SECRET`, `CORS_ORIGIN`)
+- [x] Dependency audit: all imports declared, `expo install --check` clean, `tsc` clean in api/app/shared
+- [x] Docker daemon enabled + `melz` added to `docker` group; Postgres up, API boots, migrations applied, CORS preflight verified
+- [ ] Rewrite `session-start` / `restore-project` / `backup-projects` skills for Linux (they are PowerShell + Windows/NAS paths)
+- [ ] Mount the NAS share (`\\RASPBERRYPI\Data-NAS`) on this host so backup/restore can run
+- [ ] `npm audit` reports 20 vulns (9 high), mostly inside Expo's tree — revisit on next Expo SDK bump, don't `--force`
+
 ## Also done this session (not phase-numbered)
 - [x] Build Ledger artifact (https://claude.ai/artifact/XsCEU2QLwnw5h8QYb5FFkZ) restructured into a navigable guide: build order, architecture, stack, 5 build parts, troubleshooting, command reference (No. 001–026). Keep appending to it as new features land (login/signup forms, PIN unlock, re-lock).
 - [x] Prettier + format-on-save, matching `chores-chart`/`meal-planner` convention
