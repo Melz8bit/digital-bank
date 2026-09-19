@@ -32,15 +32,22 @@ Full plan lives at the plan file from the initial planning session; this tracks 
 - [ ] Client: login/signup screens wired via React Query + `useAuthStore`
   - [x] Installed `@tanstack/react-query`, `zustand`, `@react-native-async-storage/async-storage` in the `app` workspace
   - [x] Design decisions: AsyncStorage for token persistence everywhere (not `expo-secure-store`, which doesn't work on web — matches the app's established low-threat-model reasoning); route gating via Expo Router 6's `<Stack.Protected guard={...}>` with an `(auth)` group for login/signup and the existing `(tabs)` group protected behind `!!token`
-  - [ ] `app/store/authStore.ts` — **in progress**. `AuthState` interface written (`token`, `parent`, `hasHydrated`, `setSession`/`clearSession`/`setHasHydrated`). Still need: the actual `create<AuthState>()(persist((set) => ({...}), {...}))` body — state defaults, the three actions' `set(...)` calls, and the `persist` config (`name`, `storage: createJSONStorage(() => AsyncStorage)`, `onRehydrateStorage`). Open question left unanswered: whether to add `partialize` to exclude `hasHydrated` from what gets written to storage (harmless either way, just sloppy without it).
-  - [ ] `queryClient.ts` + `QueryClientProvider` in root `_layout.tsx` — not started
-  - [ ] signup/login mutations (React Query, calling `/auth/signup` + `/auth/login`) — not started
-  - [ ] `(auth)` route group + `Stack.Protected` gating in root `_layout.tsx` — not started
-  - [ ] actual login/signup screen UI — not started
+  - [x] `app/store/authStore.ts` — zustand store wrapped in `persist` with `createJSONStorage(() => AsyncStorage)`; `onRehydrateStorage` flips `hasHydrated` to `true` once storage has loaded. (`partialize` for `hasHydrated` still undecided — harmless without it.)
+  - [x] `app/lib/queryClient.ts` + `QueryClientProvider` wrapping the root `_layout.tsx`
+  - [x] `app/lib/apiClient.ts` (`postJson` + `EXPO_PUBLIC_API_URL`, falls back to `http://localhost:3000`) and `app/hooks/useAuthMutations.ts` (`useSignupMutation` / `useLoginMutation`, `onSuccess` writes the session into the store)
+  - [x] API CORS: `cors` package, `CORS_ORIGIN` in `api/src/env.ts` (default `http://localhost:19006`), `app.use(cors(...))` in `app.ts`. `env.ts` now loads `dotenv` itself (import order bug when `app.ts` imported it first).
+  - [x] `(auth)` route group (`_layout.tsx`, placeholder `login.tsx` / `signup.tsx`) + `Stack.Protected` gating in root `_layout.tsx` (`guard={!!token}` for `(tabs)`, `guard={!token}` for `(auth)`, `return null` until `hasHydrated`). Verified in headless Edge: logged-out lands on Login.
+  - [x] Fixed blank web screen: zustand's middleware build uses `import.meta.env`, which Metro's web bundle can't parse — added `app/babel.config.js` with `unstable_transformImportMeta: true`
+  - [x] Pinned `@react-native-async-storage/async-storage` to `2.2.0` via `npx expo install` (Expo SDK 54's expected version; v3.x was installed first)
+  - [ ] actual login/signup screen UI (forms, `isPending`/`error` display, link between screens) — **next**; first real end-to-end test of the mutations + CORS
+  - [ ] verify the logged-in side of the gate (tabs reachable with a token, back to login after `clearSession()`)
+  - [x] committed and pushed (2026-09-19)
+  - [x] Dev-server gotcha: after any dependency change, restart Expo with `--clear` (Metro cached a stale `node_modules` map after the AsyncStorage downgrade → "Unable to resolve module merge-options" → JSON bundle error → blank page)
 - [ ] Client: PIN unlock screen gating the Settings tab
 - [ ] Client: `AppState` re-lock on backgrounding
 
 ## Also done this session (not phase-numbered)
+- [x] Build Ledger artifact (https://claude.ai/artifact/XsCEU2QLwnw5h8QYb5FFkZ) restructured into a navigable guide: build order, architecture, stack, 5 build parts, troubleshooting, command reference (No. 001–026). Keep appending to it as new features land (login/signup forms, PIN unlock, re-lock).
 - [x] Prettier + format-on-save, matching `chores-chart`/`meal-planner` convention
 - [x] GitHub repo created (`Melz8bit/digital-bank`, public, no license) and pushed
 
