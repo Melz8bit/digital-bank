@@ -1,23 +1,45 @@
-import { Text, View, StyleSheet } from 'react-native';
+import { useState } from 'react';
+import { useLoginMutation } from '@/hooks/useAuthMutations';
+import { TextInput, Pressable, Text, View } from 'react-native';
+import { Link } from 'expo-router';
 
 export default function LoginScreen() {
+  const { mutate, isPending, error } = useLoginMutation();
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+
+  const handleSubmit = () => {
+    mutate({ email, password });
+  };
+
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Login</Text>
+    <View>
+      <TextInput
+        value={email}
+        onChangeText={setEmail}
+        placeholder="Email"
+        autoCapitalize="none"
+        keyboardType="email-address"
+        textContentType="emailAddress"
+      />
+
+      <TextInput
+        value={password}
+        onChangeText={setPassword}
+        placeholder="Password"
+        secureTextEntry
+        textContentType="password"
+      />
+
+      <Pressable onPress={handleSubmit} disabled={isPending}>
+        <Text>{isPending ? 'Logging in...' : 'Log In'}</Text>
+      </Pressable>
+
+      <Link href="/signup">
+        <Text>Need an account? Sign up</Text>
+      </Link>
+
+      {error && <Text>{error.message}</Text>}
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    padding: 24,
-  },
-  title: {
-    fontSize: 20,
-    fontWeight: '600',
-  },
-});
