@@ -29,7 +29,7 @@ Full plan lives at the plan file from the initial planning session; this tracks 
   - [x] mounted at `app.use('/pin', pinRouter)`
   - [x] verified end-to-end against real dev DB: status before/after set, duplicate-set rejection, correct verify, 4x wrong→401 then 5th→423, locked-out correct PIN still 423, verify against a family with no PIN set→409. Test data cleaned up.
   - [x] design decisions: PIN is family-wide (not per-parent); second parent joining via invite code skips PIN setup entirely (client-side routing off which signup branch was used, not an API concern); PIN change (requires old PIN) deferred to the later account-settings phase
-- [ ] Client: login/signup screens wired via React Query + `useAuthStore`
+- [x] Client: login/signup screens wired via React Query + `useAuthStore`
   - [x] Installed `@tanstack/react-query`, `zustand`, `@react-native-async-storage/async-storage` in the `app` workspace
   - [x] Design decisions: AsyncStorage for token persistence everywhere (not `expo-secure-store`, which doesn't work on web — matches the app's established low-threat-model reasoning); route gating via Expo Router 6's `<Stack.Protected guard={...}>` with an `(auth)` group for login/signup and the existing `(tabs)` group protected behind `!!token`
   - [x] `app/store/authStore.ts` — zustand store wrapped in `persist` with `createJSONStorage(() => AsyncStorage)`; `onRehydrateStorage` flips `hasHydrated` to `true` once storage has loaded. (`partialize` for `hasHydrated` still undecided — harmless without it.)
@@ -39,11 +39,17 @@ Full plan lives at the plan file from the initial planning session; this tracks 
   - [x] `(auth)` route group (`_layout.tsx`, placeholder `login.tsx` / `signup.tsx`) + `Stack.Protected` gating in root `_layout.tsx` (`guard={!!token}` for `(tabs)`, `guard={!token}` for `(auth)`, `return null` until `hasHydrated`). Verified in headless Edge: logged-out lands on Login.
   - [x] Fixed blank web screen: zustand's middleware build uses `import.meta.env`, which Metro's web bundle can't parse — added `app/babel.config.js` with `unstable_transformImportMeta: true`
   - [x] Pinned `@react-native-async-storage/async-storage` to `2.2.0` via `npx expo install` (Expo SDK 54's expected version; v3.x was installed first)
-  - [ ] actual login/signup screen UI (forms, `isPending`/`error` display, link between screens) — **next**; first real end-to-end test of the mutations + CORS
-  - [ ] verify the logged-in side of the gate (tabs reachable with a token, back to login after `clearSession()`)
+  - [x] actual login/signup screen UI (forms, `isPending`/`error` display, link between screens via `expo-router`'s `<Link>`)
+  - [x] verify the logged-in side of the gate — signed up for real, landed in `(tabs)` (2026-09-22)
   - [x] committed and pushed (2026-09-19)
   - [x] Dev-server gotcha: after any dependency change, restart Expo with `--clear` (Metro cached a stale `node_modules` map after the AsyncStorage downgrade → "Unable to resolve module merge-options" → JSON bundle error → blank page)
-- [ ] Client: PIN unlock screen gating the Settings tab
+  - [x] Dev-server gotcha #2 (2026-09-22): a stray duplicate `app/(auth)/` directory existed at the workspace root (outside `app/app/`, the actual Expo Router root) — all form work briefly landed there and was invisible to the router, which kept serving the old September 19 placeholder screens instead. Fixed by moving the finished `login.tsx`/`signup.tsx` into `app/app/(auth)/` and deleting the stray directory. When editing route files, confirm the path is under `app/app/`, not `app/`.
+- [x] Client: PIN unlock screen gating the Settings tab
+  - [x] `app/lib/apiClient.ts` extended with authenticated variants: `handleResponse()` shared helper, `getJsonAuth()`/`postJsonAuth()` attach `Authorization: Bearer <token>` via `useAuthStore.getState()`
+  - [x] `app/hooks/usePinMutations.ts` — `usePinStatusQuery` (`useQuery`, since it's a read), `useSetPinMutation`/`useVerifyPinMutation` (`useMutation`, via `postJsonAuth`)
+  - [x] `app/store/pinStore.ts` — `usePinStore` (`unlocked` boolean, `unlock()`/`lock()`), deliberately *not* persisted so it resets every app restart (session-scoped unlock, not permanent)
+  - [x] `app/app/(tabs)/settings.tsx` — three-state gate: loading → set-PIN form (no `pinSet`) → verify-PIN form (`pinSet` but not `unlocked`) → real settings. Setting a PIN also invalidates the `pinStatus` query and calls `unlock()` directly so you don't immediately have to re-enter it.
+  - [x] Verified end-to-end in the real app (2026-09-22): set PIN, landed in settings; reload required PIN re-entry; wrong PIN showed error; correct PIN unlocked.
 - [ ] Client: `AppState` re-lock on backgrounding
 
 ## Environment setup on Linux host (2026-09-19, second session)
