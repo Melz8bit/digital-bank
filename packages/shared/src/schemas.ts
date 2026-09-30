@@ -1,7 +1,5 @@
 import z from 'zod';
 
-// zod validation schemas (SignupInput, DepositInput, WithdrawalInput, PinInput, ...) land here in Phase 1.
-
 export const SignupInputSchema = z
   .object({
     email: z.email(),
@@ -24,3 +22,22 @@ export const PinInputSchema = z.object({
   pin: z.string().regex(/^\d{4}$/, 'PIN must be exactly 4 digits.'),
 });
 export type PinInput = z.infer<typeof PinInputSchema>;
+
+export const CreateChildInputSchema = z.object({
+  name: z.string().trim().min(1, 'Give your kid a name.'),
+});
+export type CreateChildInput = z.infer<typeof CreateChildInputSchema>;
+
+export const TransactionInputSchema = z.discriminatedUnion('type', [
+  z.object({
+    type: z.literal('deposit'),
+    amountCents: z.int().positive().max(10_000_000, 'That amount is too big.'),
+    category: z.enum(['allowance', 'gift', 'chore', 'other']),
+  }),
+  z.object({
+    type: z.literal('withdrawal'),
+    amountCents: z.int().positive().max(10_000_000, 'That amount is too big.'),
+    comment: z.string().trim().min(1, 'Tell us what you are spending it on.'),
+  }),
+]);
+export type TransactionInput = z.infer<typeof TransactionInputSchema>;

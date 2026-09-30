@@ -83,7 +83,22 @@ Full plan lives at the plan file from the initial planning session; this tracks 
 - [ ] Add `"lib": ["ES2020"]` to `api/tsconfig.json` to remove accidental DOM globals (see the `parent` bug, Build Ledger No. 019) — flagged twice now, still not applied
 
 ## Not started
-- [ ] Phase 2 — core deposit/withdrawal flows + dashboard
+- [ ] Phase 2 — core deposit/withdrawal flows + dashboard (in progress, 2026-09-30)
+  - [x] Step 1: `children` + `transactions` in `schema.ts` (CHECKs `amount_positive`/`type_check`, index `(child_id, created_at DESC)`), migration `0001_premium_landau` applied to the Pi dev DB
+  - [x] Step 2: shared zod — `CreateChildInput`, `TransactionInput` (discriminated union: deposit+category / withdrawal+required comment)
+  - [x] Step 3: `childService` + routes (minimal create/list, family-scoped; full CRUD stays Phase 3)
+    - `familyService.getFamilyForParent()` extracted from `pinService` (shared by pin + child services); `childService`: `createChild`, `listChildren` (active only, oldest first), `getChildForParent` (family-scoped, excludes archived, throws `CHILD_NOT_FOUND` — unused until Step 5); `children.routes.ts` mounted at `/children` behind `router.use(requireAuth)`, `GET /` → `{ children }`, `POST /` → 201 `{ child }`. Verified with curl (health 200, no token 401, empty list, blank name 400, create trims name, list, other family sees nothing); test data cleaned up.
+  - [ ] Step 4: `transactionService` — computed balance, recent list, transactional insert with cap/balance enforcement (422 `CAP_EXCEEDED` / `INSUFFICIENT_BALANCE`)
+  - [ ] Step 5: transaction routes (deposit PIN-gated, withdrawal not)
+  - [ ] Step 6: client React Query hooks + invalidation
+  - [ ] Step 7: dashboard — balance card + recent list
+  - [ ] Step 8: deposit / withdrawal screens
+  - [ ] Step 9: income vs. spending chart (`react-native-gifted-charts`) + `/summary`
+  - [ ] Step 10: kid-friendly styling pass
+  - Open design question for Step 5: the server has no notion of "unlocked" — `/pin/verify` returns 200 but issues nothing, so "deposit requires PIN" is currently client-only. Decide: send the PIN with each deposit, have verify issue a short-lived parent-mode token, or accept client-side gating for a family app.
+  - Step 6 fix: 400 responses send `message: treeifyError(...)` (an object) → client `new Error(message)` would show `[object Object]`. Send a readable string (e.g. first issue message) from `children.routes.ts` and `pin.routes.ts`.
+  - Gotcha: new migration `.sql` files are NOT picked up by `tsx watch` (not imported) — restart the API to apply them
+  - Phase 3 note: `transactions.created_by` → `parents` has no `onDelete`, so deleting a parent with transactions is refused; "remove co-parent" must handle this
 - [ ] Phase 3 — settings completeness + multi-child + family/invite (this is where `invite_codes` table + the stubbed `INVITE_SIGNUP_NOT_IMPLEMENTED` branch in `signup()` get filled in for real)
 - [ ] Phase 4 — Pi deployment
 - [ ] Phase 5 — stretch goals

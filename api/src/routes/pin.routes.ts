@@ -3,7 +3,6 @@ import { setPin, verifyPin, getPinStatus } from '../services/pinService';
 import { PinInputSchema } from '@digital-bank/shared';
 import { treeifyError } from 'zod';
 import { requireAuth } from '../middleware/requireAuth';
-import { de } from 'zod/v4/locales';
 
 const router = Router();
 router.get('/status', requireAuth, async (req, res) => {
