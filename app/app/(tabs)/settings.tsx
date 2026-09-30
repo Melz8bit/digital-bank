@@ -1,7 +1,11 @@
 import { useState } from 'react';
 import { StyleSheet, Text, TextInput, Pressable, View } from 'react-native';
 import { useQueryClient } from '@tanstack/react-query';
-import { usePinStatusQuery, useSetPinMutation, useVerifyPinMutation } from '@/hooks/usePinMutations';
+import {
+  usePinStatusQuery,
+  useSetPinMutation,
+  useVerifyPinMutation,
+} from '@/hooks/usePinMutations';
 import { usePinStore } from '@/store/pinStore';
 
 export default function SettingsScreen() {
@@ -29,6 +33,7 @@ export default function SettingsScreen() {
           onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['pinStatus'] });
             unlock();
+            setPin('');
           },
         }
       );
@@ -58,7 +63,11 @@ export default function SettingsScreen() {
       verifyPinMutation.mutate(
         { pin },
         {
-          onSuccess: () => unlock(),
+          onSuccess: () => {
+            unlock();
+            setPin('');
+          },
+          onError: () => setPin(''),
         }
       );
     };

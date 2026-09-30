@@ -50,7 +50,12 @@ Full plan lives at the plan file from the initial planning session; this tracks 
   - [x] `app/store/pinStore.ts` — `usePinStore` (`unlocked` boolean, `unlock()`/`lock()`), deliberately *not* persisted so it resets every app restart (session-scoped unlock, not permanent)
   - [x] `app/app/(tabs)/settings.tsx` — three-state gate: loading → set-PIN form (no `pinSet`) → verify-PIN form (`pinSet` but not `unlocked`) → real settings. Setting a PIN also invalidates the `pinStatus` query and calls `unlock()` directly so you don't immediately have to re-enter it.
   - [x] Verified end-to-end in the real app (2026-09-22): set PIN, landed in settings; reload required PIN re-entry; wrong PIN showed error; correct PIN unlocked.
-- [ ] Client: `AppState` re-lock on backgrounding
+- [x] Client: `AppState` re-lock on backgrounding (2026-09-30)
+  - [x] `app/hooks/useAutoLock.ts` — `AppState` `change` listener in a `useEffect([])` with `subscription.remove()` cleanup; any state other than `'active'` calls `usePinStore.getState().lock()` (no stale closure, no deps). Called in root `_layout.tsx` above the `hasHydrated` early return (rules of hooks).
+  - [x] `settings.tsx` — PIN input cleared after set, successful verify, and failed verify. Bug found in testing: `SettingsScreen` stays mounted across lock/unlock (tabs don't unmount), so the old PIN was still in the box after re-lock, making re-lock pointless.
+  - [x] Verified in the real app (web): unlock → switch browser tab → back → PIN required again, input empty.
+
+**Phase 1 complete.**
 
 ## Environment setup on Linux host (2026-09-19, second session)
 - [x] Fresh checkout had no `node_modules` / `api/.env` — ran `npm install` (823 packages), wrote gitignored `api/.env` (`DATABASE_URL`, random `JWT_SECRET`, `CORS_ORIGIN`)
@@ -64,6 +69,15 @@ Full plan lives at the plan file from the initial planning session; this tracks 
 - [x] Build Ledger artifact (https://claude.ai/artifact/XsCEU2QLwnw5h8QYb5FFkZ) restructured into a navigable guide: build order, architecture, stack, 5 build parts, troubleshooting, command reference (No. 001–026). Keep appending to it as new features land (login/signup forms, PIN unlock, re-lock).
 - [x] Prettier + format-on-save, matching `chores-chart`/`meal-planner` convention
 - [x] GitHub repo created (`Melz8bit/digital-bank`, public, no license) and pushed
+
+## Shared dev database (2026-09-30)
+- [x] Dev Postgres moved to the Pi (`~/digital-bank-devdb`, db `digitalbank_dev`) so every computer shares one set of accounts/data; Windows `api/.env` switched over, migrations applied, local `compose.dev.yml` container stopped (kept as an offline fallback)
+- [ ] Point the Linux machine's `api/.env` at the Pi DB too (include this command under "Pending" in the session log at session end):
+  ```bash
+  PW=$(ssh pi@192.168.1.73 "grep POSTGRES_PASSWORD ~/digital-bank-devdb/.env | cut -d= -f2")
+  sed -i "s|^DATABASE_URL=.*|DATABASE_URL=postgres://digitalbank:$PW@192.168.1.73:5432/digitalbank_dev|" api/.env
+  docker compose -f compose.dev.yml stop
+  ```
 
 ## Open nice-to-haves
 - [ ] Add `"lib": ["ES2020"]` to `api/tsconfig.json` to remove accidental DOM globals (see the `parent` bug, Build Ledger No. 019) — flagged twice now, still not applied
