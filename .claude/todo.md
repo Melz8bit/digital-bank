@@ -61,8 +61,8 @@ Full plan lives at the plan file from the initial planning session; this tracks 
 - [x] Fresh checkout had no `node_modules` / `api/.env` — ran `npm install` (823 packages), wrote gitignored `api/.env` (`DATABASE_URL`, random `JWT_SECRET`, `CORS_ORIGIN`)
 - [x] Dependency audit: all imports declared, `expo install --check` clean, `tsc` clean in api/app/shared
 - [x] Docker daemon enabled + `melz` added to `docker` group; Postgres up, API boots, migrations applied, CORS preflight verified
-- [ ] Rewrite `session-start` / `restore-project` / `backup-projects` skills for Linux (they are PowerShell + Windows/NAS paths)
-- [ ] Mount the NAS share (`\\RASPBERRYPI\Data-NAS`) on this host so backup/restore can run
+- [x] Rewrite `session-start` / `restore-project` / `backup-projects` skills for Linux (skills now have Linux sections; confirmed working 2026-10-08)
+- [x] Mount the NAS share (`\\RASPBERRYPI\Data-NAS`) on this host so backup/restore can run (mounted at `/mnt/nas` via fstab; restore worked 2026-10-08)
 - [ ] `npm audit` reports 20 vulns (9 high), mostly inside Expo's tree — revisit on next Expo SDK bump, don't `--force`
 
 ## Also done this session (not phase-numbered)
@@ -72,7 +72,7 @@ Full plan lives at the plan file from the initial planning session; this tracks 
 
 ## Shared dev database (2026-09-30)
 - [x] Dev Postgres moved to the Pi (`~/digital-bank-devdb`, db `digitalbank_dev`) so every computer shares one set of accounts/data; Windows `api/.env` switched over, migrations applied, local `compose.dev.yml` container stopped (kept as an offline fallback)
-- [ ] Point the Linux machine's `api/.env` at the Pi DB too (include this command under "Pending" in the session log at session end):
+- [x] Point the Linux machine's `api/.env` at the Pi DB too (done 2026-10-08; also added this machine's SSH key to the Pi):
   ```bash
   PW=$(ssh pi@192.168.1.73 "grep POSTGRES_PASSWORD ~/digital-bank-devdb/.env | cut -d= -f2")
   sed -i "s|^DATABASE_URL=.*|DATABASE_URL=postgres://digitalbank:$PW@192.168.1.73:5432/digitalbank_dev|" api/.env
@@ -80,6 +80,7 @@ Full plan lives at the plan file from the initial planning session; this tracks 
   ```
 
 ## Open nice-to-haves
+- [ ] Logout button in unlocked Settings: `clearSession()` + `usePinStore.getState().lock()` + `queryClient.clear()` (for now: DevTools console `localStorage.removeItem('auth-storage'); location.reload();`)
 - [ ] Add `"lib": ["ES2020"]` to `api/tsconfig.json` to remove accidental DOM globals (see the `parent` bug, Build Ledger No. 019) — flagged twice now, still not applied
 
 ## Not started
@@ -89,9 +90,16 @@ Full plan lives at the plan file from the initial planning session; this tracks 
   - [x] Step 3: `childService` + routes (minimal create/list, family-scoped; full CRUD stays Phase 3)
     - `familyService.getFamilyForParent()` extracted from `pinService` (shared by pin + child services); `childService`: `createChild`, `listChildren` (active only, oldest first), `getChildForParent` (family-scoped, excludes archived, throws `CHILD_NOT_FOUND` — unused until Step 5); `children.routes.ts` mounted at `/children` behind `router.use(requireAuth)`, `GET /` → `{ children }`, `POST /` → 201 `{ child }`. Verified with curl (health 200, no token 401, empty list, blank name 400, create trims name, list, other family sees nothing); test data cleaned up.
   - [ ] Step 4: `transactionService` — computed balance, recent list, transactional insert with cap/balance enforcement (422 `CAP_EXCEEDED` / `INSUFFICIENT_BALANCE`)
+    - [x] 4a `getBalance(executor, childId)` — `COALESCE(SUM(CASE ...)), 0)`, `Number()` on the bigint string; `Executor` type accepts `db` or `tx`. Tested on Pi DB (0 for empty child; 1000+250−300 = 950). (2026-10-08)
+    - [x] 4b `listRecentTransactions(executor, childId, limit = 20)` — newest first, returns full array. Tested (order, limit, other child excluded, empty → `[]`). (2026-10-08)
+    - [x] 4c part 1 `createTransaction(parentId, childId, input)` — `getFamilyForParent`, `db.transaction`, family-scoped non-archived child lookup with `.for('update')`, `CHILD_NOT_FOUND`. Temporarily `return child;`. Tested (own child ok; other-family and archived → `CHILD_NOT_FOUND`). (2026-10-08)
+    - [ ] 4c part 2 — inside the tx: `getBalance(tx, ...)`; withdrawal: cap check first (`CAP_EXCEEDED`), then `INSUFFICIENT_BALANCE`; insert with `category`/`comment` narrowed by `input.type`, `createdBy: parentId`, `.returning()`; return `{ transaction, balance: newBalance }`
+    - [ ] Test 4c end to end incl. the double-submit race (two concurrent withdrawals, only one succeeds)
+    - Cap decision (2026-10-08): cap = max amount **per withdrawal** (not a max balance). `child.capCents ?? family.defaultCapCents`; both null by default = no cap; parent sets it in Settings (Phase 3). Deposits are never capped.
   - [ ] Step 5: transaction routes (deposit PIN-gated, withdrawal not)
   - [ ] Step 6: client React Query hooks + invalidation
   - [ ] Step 7: dashboard — balance card + recent list
+    - Later: parent-selectable "show N transactions" dropdown (e.g. 10/20/50). Service already takes `limit`; route reads `?limit=` (validate with `z.coerce.number().int().min(1).max(100)`); client puts `limit` in the React Query key so each choice caches separately.
   - [ ] Step 8: deposit / withdrawal screens
   - [ ] Step 9: income vs. spending chart (`react-native-gifted-charts`) + `/summary`
   - [ ] Step 10: kid-friendly styling pass
