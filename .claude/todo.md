@@ -80,7 +80,11 @@ Full plan lives at the plan file from the initial planning session; this tracks 
   ```
 
 ## Open nice-to-haves
-- [ ] `~/.claude` repo on **Linux**: `git pull` blocked by local auto-synced plugin/skill changes. Fix the same way Windows was fixed 2026-10-13: `cd ~/.claude && git add -A && git commit -m "backup: <date>" && git pull --no-rebase -X theirs && git push` (GitHub version is the source of truth; `-X theirs` takes it on conflicts).
+- [ ] `~/.claude` is now a **shared network folder** (Linux: symlink to `~/NetworkDrive/Melz/Claude` on the Pi share, since 2026-10-12), so every computer uses one copy. Git there (`git@github.com:Melz8bit/claude-sync.git`) is backup/history only. Still to do (2026-10-14):
+  - [x] One-time `git checkout -f -B main origin/main` in the share to bring in the GitHub skills/settings, then re-added `"tui": "fullscreen"` (done 2026-10-14 from a normal terminal; `!` commands from inside Claude Code didn't take effect)
+  - [x] Linux branches of `restore-project`/`backup-projects` now use `~/.claude/projects/<project-name>/` (inside the share) instead of `/mnt/nas`; backup refuses to commit if `.credentials.json`/history show up in `git status` (2026-10-14)
+  - [ ] Point Windows' `~/.claude` at the same share (it probably still has its own local copy + repo)
+  - [ ] Never `git add -A` there without checking `.gitignore` first: `.credentials.json` and `history.jsonl` sit in the same folder
 - [ ] Logout button in unlocked Settings: `clearSession()` + `usePinStore.getState().lock()` + `queryClient.clear()` (for now: DevTools console `localStorage.removeItem('auth-storage'); location.reload();`)
 - [ ] Add `"lib": ["ES2020"]` to `api/tsconfig.json` to remove accidental DOM globals (see the `parent` bug, Build Ledger No. 019) — flagged three times now (2026-10-13: `tsc` suggested `IDBTransaction`), still not applied
 
@@ -100,7 +104,11 @@ Full plan lives at the plan file from the initial planning session; this tracks 
   - [x] Step 5: transaction routes (2026-10-13) — in `children.routes.ts`: `GET /children/:childId/transactions` → 200 `{ balance, transactions }` (ownership check via `getChildForParent`, then balance + list in `Promise.all`); `POST /children/:childId/transactions` → 201 `{ transaction, balance }`, 404 `CHILD_NOT_FOUND`, 422 `CAP_EXCEEDED` / `INSUFFICIENT_BALANCE` with kid-friendly messages, 400 with readable `issues[0].message` string. `ChildIdSchema = z.uuid()` makes malformed ids 404 instead of a Postgres 500. Verified over HTTP (14/14, incl. other family → 404, withdraw to exactly 0, API still healthy).
     - Polish later: zod's default messages leak through for missing fields (withdrawal without `comment` → "Invalid input: expected string, received undefined"; negative amount → "Too small: expected number to be >0"). Add custom `error` messages in `TransactionInputSchema`.
     - Idea: ESLint `@typescript-eslint/no-floating-promises` — missing `await` bit us 3× today and `tsc` caught none of them.
-  - [ ] Step 6: client React Query hooks + invalidation (hooks for `GET`/`POST /children/:childId/transactions`)
+  - [x] Step 6: client React Query hooks + invalidation (2026-10-14)
+    - `packages/shared/src/types.ts`: hand-written `Child` / `Transaction` response types (dates are `string`: JSON has no Date; shared can't import Drizzle types from `api`)
+    - `app/hooks/useTransactions.ts`: `useChildrenQuery()` (`['children']`), `useTransactionsQuery(childId?)` (`['transactions', childId]`, `enabled: !!childId`), `useCreateTransactionMutation(childId)` (`postJsonAuth`, `onSuccess` returns `invalidateQueries` so `isPending` lasts until the refetch)
+    - All 400s now send `issues[0].message` strings (`auth.routes.ts`, `pin.routes.ts`; `treeifyError` gone). Zod defaults still leak for missing `pin` and short login password: fold into the custom-messages polish item; consider `min(1)` for login password.
+    - Verified against the real API: response keys match `Child`/`Transaction`, deposit 500 → withdraw 200 → balance 300, overdraft 422, GET newest first; temp family deleted. Hooks not yet used in UI (Step 7).
   - [ ] Step 7: dashboard — balance card + recent list
     - Later: parent-selectable "show N transactions" dropdown (e.g. 10/20/50). Service already takes `limit`; route reads `?limit=` (validate with `z.coerce.number().int().min(1).max(100)`); client puts `limit` in the React Query key so each choice caches separately.
   - [ ] Step 8: deposit / withdrawal screens
