@@ -3,6 +3,7 @@ import { db } from '../db/client';
 import { children, transactions } from '../db/schema';
 import { getFamilyForParent } from './familyService';
 import { TransactionInput } from '@digital-bank/shared';
+import { error } from 'console';
 
 type Executor = typeof db | Parameters<Parameters<typeof db.transaction>[0]>[0];
 
@@ -48,6 +49,35 @@ export async function createTransaction(
       throw new Error('CHILD_NOT_FOUND');
     }
 
-    return child;
+    const balance = await getBalance(tx, childId);
+
+    if (input.type === 'withdrawal') {
+      const capCents = child.capCents ?? family.defaultCapCents;
+
+      if (capCents != null && input.amountCents > capCents) {
+        throw new Error('CAP_EXCEEDED');
+      }
+
+      if (input.amountCents > balance) {
+        throw new Error('INSUFFICIENT_BALANCE');
+      }
+    }
+
+    const [transaction] = await tx
+      .insert(transactions)
+      .values({
+        childId,
+        type: input.type,
+        amountCents: input.amountCents,
+        createdBy: parentId,
+        category: input.type === 'deposit' ? input.category : null,
+        comment: input.type === 'withdrawal' ? input.comment : null,
+      })
+      .returning();
+
+    const newBalance =
+      input.type === 'deposit' ? balance + input.amountCents : balance - input.amountCents;
+
+    return { transaction, balance: newBalance };
   });
 }

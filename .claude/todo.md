@@ -89,12 +89,12 @@ Full plan lives at the plan file from the initial planning session; this tracks 
   - [x] Step 2: shared zod — `CreateChildInput`, `TransactionInput` (discriminated union: deposit+category / withdrawal+required comment)
   - [x] Step 3: `childService` + routes (minimal create/list, family-scoped; full CRUD stays Phase 3)
     - `familyService.getFamilyForParent()` extracted from `pinService` (shared by pin + child services); `childService`: `createChild`, `listChildren` (active only, oldest first), `getChildForParent` (family-scoped, excludes archived, throws `CHILD_NOT_FOUND` — unused until Step 5); `children.routes.ts` mounted at `/children` behind `router.use(requireAuth)`, `GET /` → `{ children }`, `POST /` → 201 `{ child }`. Verified with curl (health 200, no token 401, empty list, blank name 400, create trims name, list, other family sees nothing); test data cleaned up.
-  - [ ] Step 4: `transactionService` — computed balance, recent list, transactional insert with cap/balance enforcement (422 `CAP_EXCEEDED` / `INSUFFICIENT_BALANCE`)
+  - [x] Step 4: `transactionService` — computed balance, recent list, transactional insert with cap/balance enforcement (422 `CAP_EXCEEDED` / `INSUFFICIENT_BALANCE`)
     - [x] 4a `getBalance(executor, childId)` — `COALESCE(SUM(CASE ...)), 0)`, `Number()` on the bigint string; `Executor` type accepts `db` or `tx`. Tested on Pi DB (0 for empty child; 1000+250−300 = 950). (2026-10-08)
     - [x] 4b `listRecentTransactions(executor, childId, limit = 20)` — newest first, returns full array. Tested (order, limit, other child excluded, empty → `[]`). (2026-10-08)
     - [x] 4c part 1 `createTransaction(parentId, childId, input)` — `getFamilyForParent`, `db.transaction`, family-scoped non-archived child lookup with `.for('update')`, `CHILD_NOT_FOUND`. Temporarily `return child;`. Tested (own child ok; other-family and archived → `CHILD_NOT_FOUND`). (2026-10-08)
-    - [ ] 4c part 2 — inside the tx: `getBalance(tx, ...)`; withdrawal: cap check first (`CAP_EXCEEDED`), then `INSUFFICIENT_BALANCE`; insert with `category`/`comment` narrowed by `input.type`, `createdBy: parentId`, `.returning()`; return `{ transaction, balance: newBalance }`
-    - [ ] Test 4c end to end incl. the double-submit race (two concurrent withdrawals, only one succeeds)
+    - [x] 4c part 2 (2026-10-13) — inside the tx: `getBalance(tx, ...)`; withdrawal: cap check first (`CAP_EXCEEDED`), then `INSUFFICIENT_BALANCE`; insert with `category`/`comment` narrowed by `input.type`, `createdBy: parentId`, `.returning()`; return `{ transaction, balance: newBalance }`
+    - [x] Tested 4c end to end on the Pi DB (2026-10-13): deposit/withdrawal balances + row shape, INSUFFICIENT_BALANCE (no row inserted), family cap, withdraw-exactly-cap allowed, child cap overrides family, cap 0 blocks, deposits ignore cap, other family → CHILD_NOT_FOUND; race: 5 concurrent 300 withdrawals on 1000 → exactly 3 succeed, final 100. Temp families deleted.
     - Cap decision (2026-10-08): cap = max amount **per withdrawal** (not a max balance). `child.capCents ?? family.defaultCapCents`; both null by default = no cap; parent sets it in Settings (Phase 3). Deposits are never capped.
   - [ ] Step 5: transaction routes (deposit PIN-gated, withdrawal not)
   - [ ] Step 6: client React Query hooks + invalidation
@@ -103,7 +103,7 @@ Full plan lives at the plan file from the initial planning session; this tracks 
   - [ ] Step 8: deposit / withdrawal screens
   - [ ] Step 9: income vs. spending chart (`react-native-gifted-charts`) + `/summary`
   - [ ] Step 10: kid-friendly styling pass
-  - Open design question for Step 5: the server has no notion of "unlocked" — `/pin/verify` returns 200 but issues nothing, so "deposit requires PIN" is currently client-only. Decide: send the PIN with each deposit, have verify issue a short-lived parent-mode token, or accept client-side gating for a family app.
+  - Step 5 PIN decision (2026-10-13): **client-side gating only** for now (option 3). Server does not enforce "deposit requires PIN"; acceptable for a family app. Revisit with a short-lived parent-mode token from `/pin/verify` if needed later.
   - Step 6 fix: 400 responses send `message: treeifyError(...)` (an object) → client `new Error(message)` would show `[object Object]`. Send a readable string (e.g. first issue message) from `children.routes.ts` and `pin.routes.ts`.
   - Gotcha: new migration `.sql` files are NOT picked up by `tsx watch` (not imported) — restart the API to apply them
   - Phase 3 note: `transactions.created_by` → `parents` has no `onDelete`, so deleting a parent with transactions is refused; "remove co-parent" must handle this
