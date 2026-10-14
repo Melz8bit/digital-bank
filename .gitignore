@@ -31,3 +31,6 @@ Thumbs.db
 
 # logs
 npm-debug.log*
+
+# python (tools/project-map)
+__pycache__/
