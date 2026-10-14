@@ -1,14 +1,13 @@
 import { Router } from 'express';
 import { login, signup } from '../services/authService';
 import { LoginInputSchema, SignupInputSchema } from '@digital-bank/shared';
-import { treeifyError } from 'zod';
 
 const router = Router();
 router.post('/signup', async (req, res) => {
   const result = SignupInputSchema.safeParse(req.body);
 
   if (!result.success) {
-    return res.status(400).json({ message: treeifyError(result.error) });
+    return res.status(400).json({ message: result.error.issues[0].message });
   }
 
   try {
@@ -32,7 +31,7 @@ router.post('/login', async (req, res) => {
   const result = LoginInputSchema.safeParse(req.body);
 
   if (!result.success) {
-    return res.status(400).json({ message: treeifyError(result.error) });
+    return res.status(400).json({ message: result.error.issues[0].message });
   }
 
   try {

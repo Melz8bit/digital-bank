@@ -1,7 +1,6 @@
 import { Router } from 'express';
 import { setPin, verifyPin, getPinStatus } from '../services/pinService';
 import { PinInputSchema } from '@digital-bank/shared';
-import { treeifyError } from 'zod';
 import { requireAuth } from '../middleware/requireAuth';
 
 const router = Router();
@@ -18,7 +17,7 @@ router.post('/set', requireAuth, async (req, res) => {
   const result = PinInputSchema.safeParse(req.body);
 
   if (!result.success) {
-    return res.status(400).json({ message: treeifyError(result.error) });
+    return res.status(400).json({ message: result.error.issues[0].message });
   }
 
   try {
@@ -38,7 +37,7 @@ router.post('/verify', requireAuth, async (req, res) => {
   const result = PinInputSchema.safeParse(req.body);
 
   if (!result.success) {
-    return res.status(400).json({ message: treeifyError(result.error) });
+    return res.status(400).json({ message: result.error.issues[0].message });
   }
 
   try {
