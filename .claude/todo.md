@@ -64,6 +64,8 @@ Full plan lives at the plan file from the initial planning session; this tracks 
 - [x] Rewrite `session-start` / `restore-project` / `backup-projects` skills for Linux (skills now have Linux sections; confirmed working 2026-10-08)
 - [x] Mount the NAS share (`\\RASPBERRYPI\Data-NAS`) on this host so backup/restore can run (mounted at `/mnt/nas` via fstab; restore worked 2026-10-08)
 - [ ] `npm audit` reports 20 vulns (9 high), mostly inside Expo's tree — revisit on next Expo SDK bump, don't `--force`
+- [ ] This Linux machine has system npm **9.2.0**: `npm install` strips `libc` fields from `package-lock.json` (reverted 2026-10-14). Upgrade npm here, or `git checkout -- package-lock.json` after installs
+- [x] 2026-10-14: fresh checkout again (no `node_modules`/`api/.env`); new SSH keys since 2026-10-12 → re-added to the Pi with `ssh-copy-id`; `/mnt/nas` gone (NAS now reached through `~/.claude` → `~/NetworkDrive/Melz/Claude`)
 
 ## Also done this session (not phase-numbered)
 - [x] Build Ledger artifact (https://claude.ai/artifact/XsCEU2QLwnw5h8QYb5FFkZ) restructured into a navigable guide: build order, architecture, stack, 5 build parts, troubleshooting, command reference (No. 001–026). Keep appending to it as new features land (login/signup forms, PIN unlock, re-lock).
@@ -85,6 +87,7 @@ Full plan lives at the plan file from the initial planning session; this tracks 
   - [x] Linux branches of `restore-project`/`backup-projects` now use `~/.claude/projects/<project-name>/` (inside the share) instead of `/mnt/nas`; backup refuses to commit if `.credentials.json`/history show up in `git status` (2026-10-14)
   - [ ] Point Windows' `~/.claude` at the same share (it probably still has its own local copy + repo)
   - [ ] Never `git add -A` there without checking `.gitignore` first: `.credentials.json` and `history.jsonl` sit in the same folder
+  - [ ] Optional: add `skills/synced/` and `.last-update-result.json` to `~/.claude/.gitignore` (auto-rewritten by Claude Code; always show as modified)
 - [ ] Logout button in unlocked Settings: `clearSession()` + `usePinStore.getState().lock()` + `queryClient.clear()` (for now: DevTools console `localStorage.removeItem('auth-storage'); location.reload();`)
 - [ ] Add `"lib": ["ES2020"]` to `api/tsconfig.json` to remove accidental DOM globals (see the `parent` bug, Build Ledger No. 019) — flagged three times now (2026-10-13: `tsc` suggested `IDBTransaction`), still not applied
 
@@ -104,6 +107,7 @@ Full plan lives at the plan file from the initial planning session; this tracks 
   - [x] Step 5: transaction routes (2026-10-13) — in `children.routes.ts`: `GET /children/:childId/transactions` → 200 `{ balance, transactions }` (ownership check via `getChildForParent`, then balance + list in `Promise.all`); `POST /children/:childId/transactions` → 201 `{ transaction, balance }`, 404 `CHILD_NOT_FOUND`, 422 `CAP_EXCEEDED` / `INSUFFICIENT_BALANCE` with kid-friendly messages, 400 with readable `issues[0].message` string. `ChildIdSchema = z.uuid()` makes malformed ids 404 instead of a Postgres 500. Verified over HTTP (14/14, incl. other family → 404, withdraw to exactly 0, API still healthy).
     - Polish later: zod's default messages leak through for missing fields (withdrawal without `comment` → "Invalid input: expected string, received undefined"; negative amount → "Too small: expected number to be >0"). Add custom `error` messages in `TransactionInputSchema`.
     - Idea: ESLint `@typescript-eslint/no-floating-promises` — missing `await` bit us 3× today and `tsc` caught none of them.
+  - [ ] Prettier: 5 files never formatted (`api/src/db/client.ts`, `app/app/(tabs)/_layout.tsx`, `app/app/(tabs)/index.tsx`, `packages/shared/src/index.ts`, `money.ts`). One formatting-only commit: `npx prettier --write "api/src/**/*.ts" "app/**/*.{ts,tsx}" "packages/shared/src/**/*.ts"`
   - [x] Step 6: client React Query hooks + invalidation (2026-10-14)
     - `packages/shared/src/types.ts`: hand-written `Child` / `Transaction` response types (dates are `string`: JSON has no Date; shared can't import Drizzle types from `api`)
     - `app/hooks/useTransactions.ts`: `useChildrenQuery()` (`['children']`), `useTransactionsQuery(childId?)` (`['transactions', childId]`, `enabled: !!childId`), `useCreateTransactionMutation(childId)` (`postJsonAuth`, `onSuccess` returns `invalidateQueries` so `isPending` lasts until the refetch)
