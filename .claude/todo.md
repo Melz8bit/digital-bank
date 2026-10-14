@@ -82,12 +82,12 @@ Full plan lives at the plan file from the initial planning session; this tracks 
   ```
 
 ## Open nice-to-haves
-- [ ] `~/.claude` is now a **shared network folder** (Linux: symlink to `~/NetworkDrive/Melz/Claude` on the Pi share, since 2026-10-12), so every computer uses one copy. Git there (`git@github.com:Melz8bit/claude-sync.git`) is backup/history only. Still to do (2026-10-14):
+- [ ] `~/.claude` setup (revised 2026-10-14): local git clone of `Melz8bit/claude-sync` on every machine = live sync for config; NAS (`~/NetworkDrive/Melz/Claude/projects/`) holds only memory/transcripts. Linux laptop swapped from the share symlink to a local clone (2026-10-14, done).
   - [x] One-time `git checkout -f -B main origin/main` in the share to bring in the GitHub skills/settings, then re-added `"tui": "fullscreen"` (done 2026-10-14 from a normal terminal; `!` commands from inside Claude Code didn't take effect)
   - [x] Linux branches of `restore-project`/`backup-projects` now use `~/.claude/projects/<project-name>/` (inside the share) instead of `/mnt/nas`; backup refuses to commit if `.credentials.json`/history show up in `git status` (2026-10-14)
-  - [ ] Point Windows' `~/.claude` at the same share (it probably still has its own local copy + repo)
+  - [x] Windows `~/.claude` confirmed as a local claude-sync clone (2026-10-14)
   - [ ] Never `git add -A` there without checking `.gitignore` first: `.credentials.json` and `history.jsonl` sit in the same folder
-  - [ ] Optional: add `skills/synced/` and `.last-update-result.json` to `~/.claude/.gitignore` (auto-rewritten by Claude Code; always show as modified)
+  - [x] (2026-10-14) add `skills/synced/`, `plugins/synced/**/.in_use/` and `.last-update-result.json` to `~/.claude/.gitignore` (auto-rewritten by Claude Code; always show as modified)
 - [ ] Logout button in unlocked Settings: `clearSession()` + `usePinStore.getState().lock()` + `queryClient.clear()` (for now: DevTools console `localStorage.removeItem('auth-storage'); location.reload();`)
 - [ ] Add `"lib": ["ES2020"]` to `api/tsconfig.json` to remove accidental DOM globals (see the `parent` bug, Build Ledger No. 019) — flagged three times now (2026-10-13: `tsc` suggested `IDBTransaction`), still not applied
 
