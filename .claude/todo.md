@@ -80,8 +80,9 @@ Full plan lives at the plan file from the initial planning session; this tracks 
   ```
 
 ## Open nice-to-haves
+- [ ] `~/.claude` repo: commit/stash auto-synced plugin/skill changes on both machines — `git pull` fails on Linux (2026-10-08) and Windows (2026-10-13)
 - [ ] Logout button in unlocked Settings: `clearSession()` + `usePinStore.getState().lock()` + `queryClient.clear()` (for now: DevTools console `localStorage.removeItem('auth-storage'); location.reload();`)
-- [ ] Add `"lib": ["ES2020"]` to `api/tsconfig.json` to remove accidental DOM globals (see the `parent` bug, Build Ledger No. 019) — flagged twice now, still not applied
+- [ ] Add `"lib": ["ES2020"]` to `api/tsconfig.json` to remove accidental DOM globals (see the `parent` bug, Build Ledger No. 019) — flagged three times now (2026-10-13: `tsc` suggested `IDBTransaction`), still not applied
 
 ## Not started
 - [ ] Phase 2 — core deposit/withdrawal flows + dashboard (in progress, 2026-09-30)
@@ -96,8 +97,10 @@ Full plan lives at the plan file from the initial planning session; this tracks 
     - [x] 4c part 2 (2026-10-13) — inside the tx: `getBalance(tx, ...)`; withdrawal: cap check first (`CAP_EXCEEDED`), then `INSUFFICIENT_BALANCE`; insert with `category`/`comment` narrowed by `input.type`, `createdBy: parentId`, `.returning()`; return `{ transaction, balance: newBalance }`
     - [x] Tested 4c end to end on the Pi DB (2026-10-13): deposit/withdrawal balances + row shape, INSUFFICIENT_BALANCE (no row inserted), family cap, withdraw-exactly-cap allowed, child cap overrides family, cap 0 blocks, deposits ignore cap, other family → CHILD_NOT_FOUND; race: 5 concurrent 300 withdrawals on 1000 → exactly 3 succeed, final 100. Temp families deleted.
     - Cap decision (2026-10-08): cap = max amount **per withdrawal** (not a max balance). `child.capCents ?? family.defaultCapCents`; both null by default = no cap; parent sets it in Settings (Phase 3). Deposits are never capped.
-  - [ ] Step 5: transaction routes (deposit PIN-gated, withdrawal not)
-  - [ ] Step 6: client React Query hooks + invalidation
+  - [x] Step 5: transaction routes (2026-10-13) — in `children.routes.ts`: `GET /children/:childId/transactions` → 200 `{ balance, transactions }` (ownership check via `getChildForParent`, then balance + list in `Promise.all`); `POST /children/:childId/transactions` → 201 `{ transaction, balance }`, 404 `CHILD_NOT_FOUND`, 422 `CAP_EXCEEDED` / `INSUFFICIENT_BALANCE` with kid-friendly messages, 400 with readable `issues[0].message` string. `ChildIdSchema = z.uuid()` makes malformed ids 404 instead of a Postgres 500. Verified over HTTP (14/14, incl. other family → 404, withdraw to exactly 0, API still healthy).
+    - Polish later: zod's default messages leak through for missing fields (withdrawal without `comment` → "Invalid input: expected string, received undefined"; negative amount → "Too small: expected number to be >0"). Add custom `error` messages in `TransactionInputSchema`.
+    - Idea: ESLint `@typescript-eslint/no-floating-promises` — missing `await` bit us 3× today and `tsc` caught none of them.
+  - [ ] Step 6: client React Query hooks + invalidation (hooks for `GET`/`POST /children/:childId/transactions`)
   - [ ] Step 7: dashboard — balance card + recent list
     - Later: parent-selectable "show N transactions" dropdown (e.g. 10/20/50). Service already takes `limit`; route reads `?limit=` (validate with `z.coerce.number().int().min(1).max(100)`); client puts `limit` in the React Query key so each choice caches separately.
   - [ ] Step 8: deposit / withdrawal screens
