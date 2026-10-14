@@ -80,7 +80,7 @@ Full plan lives at the plan file from the initial planning session; this tracks 
   ```
 
 ## Open nice-to-haves
-- [ ] `~/.claude` repo: commit/stash auto-synced plugin/skill changes on both machines — `git pull` fails on Linux (2026-10-08) and Windows (2026-10-13)
+- [ ] `~/.claude` repo on **Linux**: `git pull` blocked by local auto-synced plugin/skill changes. Fix the same way Windows was fixed 2026-10-13: `cd ~/.claude && git add -A && git commit -m "backup: <date>" && git pull --no-rebase -X theirs && git push` (GitHub version is the source of truth; `-X theirs` takes it on conflicts).
 - [ ] Logout button in unlocked Settings: `clearSession()` + `usePinStore.getState().lock()` + `queryClient.clear()` (for now: DevTools console `localStorage.removeItem('auth-storage'); location.reload();`)
 - [ ] Add `"lib": ["ES2020"]` to `api/tsconfig.json` to remove accidental DOM globals (see the `parent` bug, Build Ledger No. 019) — flagged three times now (2026-10-13: `tsc` suggested `IDBTransaction`), still not applied
 
