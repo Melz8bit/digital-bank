@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { Child, Transaction, TransactionInput } from '@digital-bank/shared';
 import { getJsonAuth, postJsonAuth } from '@/lib/apiClient';
 
@@ -20,6 +20,17 @@ export function useTransactionsQuery(childId: string | undefined) {
   });
 }
 
+export function useFamilyTransactionsQuery(childId?: string) {
+  return useQuery({
+    queryKey: ['familyTransactions', childId ?? 'all'],
+    queryFn: () =>
+      getJsonAuth<{ balances: Record<string, number>; transactions: Transaction[] }>(
+        childId ? `/transactions?childId=${childId}` : '/transactions'
+      ),
+    placeholderData: keepPreviousData,
+  });
+}
+
 export function useCreateTransactionMutation(childId: string) {
   const queryClient = useQueryClient();
 
@@ -29,6 +40,10 @@ export function useCreateTransactionMutation(childId: string) {
         `/children/${childId}/transactions`,
         input
       ),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['transactions', childId] }),
+    onSuccess: () =>
+      Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['transactions', childId] }),
+        queryClient.invalidateQueries({ queryKey: ['familyTransactions'] }),
+      ]),
   });
 }
