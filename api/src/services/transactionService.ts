@@ -1,9 +1,8 @@
-import { and, desc, eq, isNull, sql } from 'drizzle-orm';
+import { and, desc, eq, getTableColumns, isNull, sql } from 'drizzle-orm';
 import { db } from '../db/client';
 import { children, transactions } from '../db/schema';
 import { getFamilyForParent } from './familyService';
 import { TransactionInput } from '@digital-bank/shared';
-import { error } from 'console';
 
 type Executor = typeof db | Parameters<Parameters<typeof db.transaction>[0]>[0];
 
@@ -27,6 +26,36 @@ export async function listRecentTransactions(executor: Executor, childId: string
     .limit(limit);
 
   return recentTransactions;
+}
+
+export async function getFamilyBalances(familyId: string): Promise<Record<string, number>> {
+  const rows = await db
+    .select({
+      childId: children.id,
+      balance: sql<string>`COALESCE(SUM(CASE WHEN ${transactions.type} = 'deposit' THEN ${transactions.amountCents} ELSE -${transactions.amountCents} END), 0)`,
+    })
+    .from(children)
+    .leftJoin(transactions, eq(transactions.childId, children.id))
+    .where(and(eq(children.familyId, familyId), isNull(children.archivedAt)))
+    .groupBy(children.id);
+
+  return Object.fromEntries(rows.map((row) => [row.childId, Number(row.balance)]));
+}
+
+export async function listFamilyTransactions(familyId: string, childId?: string, limit = 20) {
+  return db
+    .select(getTableColumns(transactions))
+    .from(transactions)
+    .innerJoin(children, eq(transactions.childId, children.id))
+    .where(
+      and(
+        eq(children.familyId, familyId),
+        isNull(children.archivedAt),
+        childId ? eq(transactions.childId, childId) : undefined
+      )
+    )
+    .orderBy(desc(transactions.createdAt))
+    .limit(limit);
 }
 
 export async function createTransaction(
