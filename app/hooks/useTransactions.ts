@@ -9,17 +9,6 @@ export function useChildrenQuery() {
   });
 }
 
-export function useTransactionsQuery(childId: string | undefined) {
-  return useQuery({
-    queryKey: ['transactions', childId],
-    queryFn: () =>
-      getJsonAuth<{ balance: number; transactions: Transaction[] }>(
-        `/children/${childId}/transactions`
-      ),
-    enabled: !!childId,
-  });
-}
-
 export function useFamilyTransactionsQuery(childId?: string) {
   return useQuery({
     queryKey: ['familyTransactions', childId ?? 'all'],
@@ -40,10 +29,6 @@ export function useCreateTransactionMutation(childId: string) {
         `/children/${childId}/transactions`,
         input
       ),
-    onSuccess: () =>
-      Promise.all([
-        queryClient.invalidateQueries({ queryKey: ['transactions', childId] }),
-        queryClient.invalidateQueries({ queryKey: ['familyTransactions'] }),
-      ]),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['familyTransactions'] }),
   });
 }
