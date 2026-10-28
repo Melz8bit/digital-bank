@@ -126,7 +126,11 @@ Full plan lives at the plan file from the initial planning session; this tracks 
     - [ ] Polish (Step 10 candidate): categories show lowercase as stored ("chore", "gift") next to capitalized comments; capitalize for display
     - [x] Deleted the per-child `useTransactionsQuery` (2026-10-28): `useFamilyTransactionsQuery(childId)` + `balances[childId]` covers a per-kid view, and two caches of the same data would drift. Mutation now invalidates only the `['familyTransactions']` prefix.
     - [ ] API cleanup: `GET /children/:childId/transactions` has no client caller now (the `POST` on the same path is still used). Remove it, or keep for a future detail screen.
-    - [ ] Later: dashboard title shows the family name. Plan: `GET /family` → `{ family: { id, name } }` (pick fields explicitly; the row has `pinHash`) + `useFamilyQuery()`; fallback title `'Family Bank'`. Phase 3 settings reuses the endpoint. Show the name as stored (not "The ___ Family").
+    - [ ] Dashboard title shows the family name (**next up**, API walkthrough given 2026-10-28, nothing written yet). Plan: `GET /family` → `{ family: { id, name } }` (allow-list the fields; the row has `pinHash`) + `useFamilyQuery()`; fallback title `'Family Bank'`. Phase 3 settings reuses the endpoint. Show the name as stored (not "The ___ Family").
+      - [ ] A: `Family` type (`id`, `name`) in `packages/shared/src/types.ts`
+      - [ ] B: `api/src/routes/family.routes.ts` (template: `transactions.routes.ts`; `router.use(requireAuth)`, `GET /` → `getFamilyForParent(req.parentId!)`, return picked fields, 500 in `catch`)
+      - [ ] C: mount `app.use('/family', familyRouter)` in `app.ts`
+      - [ ] Verify over HTTP that `pinHash` is not in the response, then client: `useFamilyQuery()` (key `['family']`, above the early returns) + title `familyData?.family.name ?? 'Family Bank'`
     - Later: parent-selectable "show N transactions" dropdown (e.g. 10/20/50). Service already takes `limit`; route reads `?limit=` (validate with `z.coerce.number().int().min(1).max(100)`); client puts `limit` in the React Query key so each choice caches separately.
   - [ ] Step 8: deposit / withdrawal screens
   - [ ] Step 9: income vs. spending chart (`react-native-gifted-charts`) + `/summary`
