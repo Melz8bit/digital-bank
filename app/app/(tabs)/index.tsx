@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View, FlatList } from 'react-native';
 import { useChildrenQuery, useFamilyTransactionsQuery } from '@/hooks/useTransactions';
 import { formatCents } from '@digital-bank/shared';
 
@@ -34,6 +34,8 @@ export default function HomeScreen() {
     );
   }
 
+  const childById = new Map(children.map((child) => [child.id, child]));
+
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Family Bank</Text>
@@ -49,6 +51,7 @@ export default function HomeScreen() {
 
       <ScrollView
         horizontal
+        style={{ flexGrow: 0 }}
         contentContainerStyle={styles.cardRow}
         showsHorizontalScrollIndicator={false}
       >
@@ -69,6 +72,37 @@ export default function HomeScreen() {
           </Pressable>
         ))}
       </ScrollView>
+
+      <FlatList
+        data={txData?.transactions ?? []}
+        keyExtractor={(tx) => tx.id}
+        renderItem={({ item }) => {
+          const child = childById.get(item.childId);
+          const isDeposit = item.type === 'deposit';
+          return (
+            <View style={styles.txRow}>
+              {/* Dot */}
+              <View style={[styles.dot, { backgroundColor: child?.colorHex ?? '#999' }]} />
+              {/* Middle: Transaction Info */}
+              <View style={styles.txMiddle}>
+                {/* Child's Name */}
+                <Text style={styles.txName}>{child?.name ?? 'Unknown'}</Text>
+                {/* Comment/Category */}
+                <Text style={styles.txDetail}>
+                  {item.comment ?? item.category} · {new Date(item.createdAt).toLocaleDateString()}
+                </Text>
+              </View>
+              {/* Amount */}
+              <Text style={[styles.txAmount, isDeposit ? styles.deposit : styles.withdrawal]}>
+                {isDeposit ? '+' : '-'}
+                {formatCents(item.amountCents)}
+              </Text>
+            </View>
+          );
+        }}
+        ListEmptyComponent={<Text>No transactions yet.</Text>}
+        style={{ flex: 1 }}
+      />
     </View>
   );
 }
@@ -116,4 +150,21 @@ const styles = StyleSheet.create({
   chipSelected: { backgroundColor: '#333' },
   chipText: { fontWeight: '700', color: '#333' },
   chipTextSelected: { color: 'white' },
+  txRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingVertical: 10,
+  },
+  dot: {
+    width: 12,
+    height: 12,
+    borderRadius: 6, // half the size turns the square into a circle
+  },
+  txMiddle: { flex: 1 }, // takes the leftover width, pushing the amount right
+  txName: { fontWeight: '600' },
+  txDetail: { fontSize: 13, color: '#666' },
+  txAmount: { fontWeight: '600' },
+  deposit: { color: '#16A34A' },
+  withdrawal: { color: '#DC2626' },
 });
