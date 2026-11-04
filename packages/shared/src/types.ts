@@ -19,3 +19,8 @@ export type Transaction = {
   createdBy: string;
   createdAt: string;
 };
+
+export type Family = {
+  id: string;
+  name: string;
+};

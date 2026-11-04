@@ -5,6 +5,7 @@ import authRouter from './routes/auth.routes';
 import pinRouter from './routes/pin.routes';
 import childrenRouter from './routes/children.routes';
 import transactionsRouter from './routes/transactions.routes';
+import familyRouter from './routes/family.routes';
 
 export function createApp() {
   const app = express();
@@ -15,6 +16,7 @@ export function createApp() {
   app.use('/pin', pinRouter);
   app.use('/children', childrenRouter);
   app.use('/transactions', transactionsRouter);
+  app.use('/family', familyRouter);
 
   app.get('/health', (_req, res) => {
     res.json({ status: 'ok' });
