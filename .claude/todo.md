@@ -88,8 +88,11 @@ Full plan lives at the plan file from the initial planning session; this tracks 
   - [x] Windows `~/.claude` confirmed as a local claude-sync clone (2026-10-14)
   - [ ] Never `git add -A` there without checking `.gitignore` first: `.credentials.json` and `history.jsonl` sit in the same folder
   - [x] (2026-10-14) add `skills/synced/`, `plugins/synced/**/.in_use/` and `.last-update-result.json` to `~/.claude/.gitignore` (auto-rewritten by Claude Code; always show as modified)
-- [ ] **Auto-logout on 401** (hit 2026-11-04: "Invalid JWT" once the 30-day token expired; the app stayed stuck on the error because `!!token` was still true). In `handleResponse()` (`app/lib/apiClient.ts`), on a 401 from an **authenticated** request call `useAuthStore.getState().clearSession()` + `usePinStore.getState().lock()` + `queryClient.clear()`, and `Stack.Protected` then sends you back to Login. Don't do this for `/auth/login`, where a 401 just means a wrong password. Put the three calls in one shared `logout()` helper so the Logout button below reuses it.
-- [ ] Logout button in unlocked Settings: `clearSession()` + `usePinStore.getState().lock()` + `queryClient.clear()` (for now: DevTools console `localStorage.removeItem('auth-storage'); location.reload();`)
+- [x] Done 2026-11-04 (built by Claude): `requireAuth`'s three 401s now send `code: 'SESSION_INVALID'`; `handleResponse()` calls `logout()` (`app/lib/logout.ts`) only on 401 **with that code**, because `/pin/verify` is authenticated and returns 401 for a wrong PIN. A plain "any authed 401" rule would have logged you out on every mistyped PIN. Verified over HTTP: expired/garbage/missing token → code present; wrong PIN / wrong password → no code.
+- [x] **Auto-logout on 401** (hit 2026-11-04: "Invalid JWT" once the 30-day token expired; the app stayed stuck on the error because `!!token` was still true). In `handleResponse()` (`app/lib/apiClient.ts`), on a 401 from an **authenticated** request call `useAuthStore.getState().clearSession()` + `usePinStore.getState().lock()` + `queryClient.clear()`, and `Stack.Protected` then sends you back to Login. Don't do this for `/auth/login`, where a 401 just means a wrong password. Put the three calls in one shared `logout()` helper so the Logout button below reuses it.
+- [ ] Logout button in unlocked Settings: just call `logout()` from `app/lib/logout.ts` (already does `clearSession()` + PIN `lock()` + `queryClient.clear()`)
+- [ ] Browser-test the auto-logout: set a garbage token in DevTools (`const s = JSON.parse(localStorage.getItem('auth-storage')); s.state.token = 'garbage'; localStorage.setItem('auth-storage', JSON.stringify(s)); location.reload();`) → should land on Login. Only verified over HTTP so far.
+- [ ] Robustness: `getFamilyForParent` assumes the parent row exists; a valid token for a deleted parent → TypeError → 500 rather than 401. Return `SESSION_INVALID` there too (Phase 3, when co-parent removal exists).
 - [ ] Add `"lib": ["ES2020"]` to `api/tsconfig.json` to remove accidental DOM globals (see the `parent` bug, Build Ledger No. 019) — flagged three times now (2026-10-13: `tsc` suggested `IDBTransaction`), still not applied
 
 ## Not started
@@ -134,7 +137,13 @@ Full plan lives at the plan file from the initial planning session; this tracks 
       - [x] Verified over HTTP: 200 with exactly `{ id, name }`, no `pinHash`; no token / garbage token → 401. Temp family deleted.
       - [x] Client: `app/hooks/useFamily.ts` `useFamilyQuery()` (key `['family']`), called above the early returns; title `` `${name} Bank` ``, fallback `'Family Bank'`. Bug caught: `familyData?.family.name + ' Family Bank'` gave the string `"undefined Family Bank"`, so the `??` fallback never fired. Dropped the "Family" suffix so the name shows as typed ("The Smith Family" → "The Smith Family Bank").
     - Later: parent-selectable "show N transactions" dropdown (e.g. 10/20/50). Service already takes `limit`; route reads `?limit=` (validate with `z.coerce.number().int().min(1).max(100)`); client puts `limit` in the React Query key so each choice caches separately.
-  - [ ] Step 8: deposit / withdrawal screens
+  - [ ] Step 8: deposit / withdrawal screens (**next up**, walkthrough given 2026-11-04, nothing written yet)
+    - **Decide first:** (1) does Spend need the PIN too, or only Add money? (2) with "All" selected, open the form with no kid picked (recommended) or hide the buttons until a kid is tapped?
+    - [ ] 8a: `app/app/transaction.tsx` as a modal, registered in root `_layout.tsx` **inside** `guard={!!token}`; route params `childId`, `type`
+    - [ ] 8b: dashboard "Add money" / "Spend" buttons open it with the selected kid preselected
+    - [ ] 8c: one form for both: Deposit/Withdraw toggle, kid chips (reuse the dashboard chips), dollar amount → `toCents()`, category chips (deposit) or comment box (withdrawal)
+    - [ ] 8d: `TransactionInputSchema.safeParse()` before `mutate`; show `error.message` for server 422s (`CAP_EXCEEDED` / `INSUFFICIENT_BALANCE`); close the modal on success (the dashboard refreshes through the existing invalidation)
+    - [ ] 8e: extract the verify-PIN form from `settings.tsx` into a reusable `<PinGate>`; use it in Settings and here
   - [ ] Step 9: income vs. spending chart (`react-native-gifted-charts`) + `/summary`
   - [ ] Step 10: kid-friendly styling pass
   - Step 5 PIN decision (2026-10-13): **client-side gating only** for now (option 3). Server does not enforce "deposit requires PIN"; acceptable for a family app. Revisit with a short-lived parent-mode token from `/pin/verify` if needed later.
