@@ -1,12 +1,14 @@
 import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View, FlatList } from 'react-native';
 import { useChildrenQuery, useFamilyTransactionsQuery } from '@/hooks/useTransactions';
+import { useFamilyQuery } from '@/hooks/useFamily';
 import { formatCents } from '@digital-bank/shared';
 
 export default function HomeScreen() {
   const { data, isLoading, error } = useChildrenQuery();
   const [selectedChildId, setSelectedChildId] = useState<string | undefined>(undefined);
   const { data: txData, isLoading: txIsLoading } = useFamilyTransactionsQuery(selectedChildId);
+  const { data: familyData } = useFamilyQuery();
 
   if (isLoading) {
     return (
@@ -35,10 +37,11 @@ export default function HomeScreen() {
   }
 
   const childById = new Map(children.map((child) => [child.id, child]));
+  const familyName = familyData ? `${familyData.family.name} Bank` : 'Family Bank';
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Family Bank</Text>
+      <Text style={styles.title}>{familyName}</Text>
 
       <Pressable
         onPress={() => setSelectedChildId(undefined)}
