@@ -88,6 +88,7 @@ Full plan lives at the plan file from the initial planning session; this tracks 
   - [x] Windows `~/.claude` confirmed as a local claude-sync clone (2026-10-14)
   - [ ] Never `git add -A` there without checking `.gitignore` first: `.credentials.json` and `history.jsonl` sit in the same folder
   - [x] (2026-10-14) add `skills/synced/`, `plugins/synced/**/.in_use/` and `.last-update-result.json` to `~/.claude/.gitignore` (auto-rewritten by Claude Code; always show as modified)
+- [ ] **Auto-logout on 401** (hit 2026-11-04: "Invalid JWT" once the 30-day token expired; the app stayed stuck on the error because `!!token` was still true). In `handleResponse()` (`app/lib/apiClient.ts`), on a 401 from an **authenticated** request call `useAuthStore.getState().clearSession()` + `usePinStore.getState().lock()` + `queryClient.clear()`, and `Stack.Protected` then sends you back to Login. Don't do this for `/auth/login`, where a 401 just means a wrong password. Put the three calls in one shared `logout()` helper so the Logout button below reuses it.
 - [ ] Logout button in unlocked Settings: `clearSession()` + `usePinStore.getState().lock()` + `queryClient.clear()` (for now: DevTools console `localStorage.removeItem('auth-storage'); location.reload();`)
 - [ ] Add `"lib": ["ES2020"]` to `api/tsconfig.json` to remove accidental DOM globals (see the `parent` bug, Build Ledger No. 019) — flagged three times now (2026-10-13: `tsc` suggested `IDBTransaction`), still not applied
 
@@ -126,11 +127,12 @@ Full plan lives at the plan file from the initial planning session; this tracks 
     - [ ] Polish (Step 10 candidate): categories show lowercase as stored ("chore", "gift") next to capitalized comments; capitalize for display
     - [x] Deleted the per-child `useTransactionsQuery` (2026-10-28): `useFamilyTransactionsQuery(childId)` + `balances[childId]` covers a per-kid view, and two caches of the same data would drift. Mutation now invalidates only the `['familyTransactions']` prefix.
     - [ ] API cleanup: `GET /children/:childId/transactions` has no client caller now (the `POST` on the same path is still used). Remove it, or keep for a future detail screen.
-    - [ ] Dashboard title shows the family name (**next up**, API walkthrough given 2026-10-28, nothing written yet). Plan: `GET /family` → `{ family: { id, name } }` (allow-list the fields; the row has `pinHash`) + `useFamilyQuery()`; fallback title `'Family Bank'`. Phase 3 settings reuses the endpoint. Show the name as stored (not "The ___ Family").
-      - [ ] A: `Family` type (`id`, `name`) in `packages/shared/src/types.ts`
-      - [ ] B: `api/src/routes/family.routes.ts` (template: `transactions.routes.ts`; `router.use(requireAuth)`, `GET /` → `getFamilyForParent(req.parentId!)`, return picked fields, 500 in `catch`)
-      - [ ] C: mount `app.use('/family', familyRouter)` in `app.ts`
-      - [ ] Verify over HTTP that `pinHash` is not in the response, then client: `useFamilyQuery()` (key `['family']`, above the early returns) + title `familyData?.family.name ?? 'Family Bank'`
+    - [x] Dashboard title shows the family name (2026-11-04). `GET /family` → `{ family: { id, name } }`; Phase 3 settings reuses the endpoint.
+      - [x] A: `Family` type (`id`, `name`) in `packages/shared/src/types.ts`
+      - [x] B: `api/src/routes/family.routes.ts`: the response is an object literal that picks the fields. `const body: Family = family` compiled but would have leaked `pinHash` (structural typing; the excess-property check only applies to literals).
+      - [x] C: mounted at `/family` in `app.ts`
+      - [x] Verified over HTTP: 200 with exactly `{ id, name }`, no `pinHash`; no token / garbage token → 401. Temp family deleted.
+      - [x] Client: `app/hooks/useFamily.ts` `useFamilyQuery()` (key `['family']`), called above the early returns; title `` `${name} Bank` ``, fallback `'Family Bank'`. Bug caught: `familyData?.family.name + ' Family Bank'` gave the string `"undefined Family Bank"`, so the `??` fallback never fired. Dropped the "Family" suffix so the name shows as typed ("The Smith Family" → "The Smith Family Bank").
     - Later: parent-selectable "show N transactions" dropdown (e.g. 10/20/50). Service already takes `limit`; route reads `?limit=` (validate with `z.coerce.number().int().min(1).max(100)`); client puts `limit` in the React Query key so each choice caches separately.
   - [ ] Step 8: deposit / withdrawal screens
   - [ ] Step 9: income vs. spending chart (`react-native-gifted-charts`) + `/summary`
